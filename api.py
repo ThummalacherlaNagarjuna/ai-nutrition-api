@@ -1,57 +1,129 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import pandas as pd
-import joblib
-
-# Load model
-model = joblib.load("models/calorie_model.pkl")
+from typing import Literal
 
 app = FastAPI()
 
-# Request format
+
+# -----------------------------
+# ROOT ENDPOINT (TEST)
+# -----------------------------
+@app.get("/")
+def read_root():
+    return {"message": "AI Nutrition API Running Successfully 🚀"}
+
+
+# -----------------------------
+# USER INPUT MODEL
+# -----------------------------
 class UserInput(BaseModel):
     age: int
-    weight: float
-    height: float
-    gender: str
-    activity: str
-    goal: str
+    weight: float   # in kg
+    height: float   # in cm
+    goal: Literal["weight_loss", "weight_gain", "maintain"]
+    diet_type: Literal["veg", "nonveg"]
+    activity_level: Literal["low", "moderate", "high"]
 
 
-@app.get("/")
-def home():
-    return {"message": "AI Nutrition API is Running"}
+# -----------------------------
+# CALORIE CALCULATION LOGIC
+# -----------------------------
+def calculate_calories(weight, height, age, goal, activity_level):
+    # Basic BMR formula (Mifflin-St Jeor simplified for demo)
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5
+
+    # Activity multiplier
+    if activity_level == "low":
+        bmr *= 1.2
+    elif activity_level == "moderate":
+        bmr *= 1.55
+    elif activity_level == "high":
+        bmr *= 1.9
+
+    # Goal adjustment
+    if goal == "weight_loss":
+        return bmr - 400
+    elif goal == "weight_gain":
+        return bmr + 400
+    else:
+        return bmr
 
 
-@app.post("/predict")
-def predict(data: UserInput):
+# -----------------------------
+# DIET PLAN GENERATOR
+# -----------------------------
+def generate_diet(calories, diet_type, goal):
+    
+    if diet_type == "veg":
+        if goal == "weight_loss":
+            return {
+                "breakfast": "Oats with fruits + Green tea",
+                "lunch": "Brown rice + Dal + Mixed vegetables",
+                "dinner": "2 Chapati + Vegetable curry",
+                "snacks": "Nuts + Sprouts salad"
+            }
+        elif goal == "weight_gain":
+            return {
+                "breakfast": "Peanut butter toast + Banana + Milk",
+                "lunch": "Rice + Dal + Paneer curry",
+                "dinner": "Chapati + Soya chunks curry",
+                "snacks": "Smoothie + Dry fruits"
+            }
+        else:
+            return {
+                "breakfast": "Idli/Dosa + Coconut chutney",
+                "lunch": "Rice + Dal + Vegetables",
+                "dinner": "Chapati + Paneer curry",
+                "snacks": "Fruits + Nuts"
+            }
 
-    input_data = pd.DataFrame([{
-        "Age": data.age,
-        "Weight": data.weight,
-        "Height": data.height,
-        "Gender": data.gender,
-        "Activity": data.activity,
-        "Goal": data.goal
-    }])
+    else:  # Non-veg
+        if goal == "weight_loss":
+            return {
+                "breakfast": "Boiled eggs + Toast",
+                "lunch": "Grilled chicken + Vegetables",
+                "dinner": "2 Chapati + Egg curry",
+                "snacks": "Boiled eggs + Fruits"
+            }
+        elif goal == "weight_gain":
+            return {
+                "breakfast": "Omelette + Peanut butter toast + Milk",
+                "lunch": "Rice + Chicken curry",
+                "dinner": "Chapati + Fish curry",
+                "snacks": "Protein smoothie + Nuts"
+            }
+        else:
+            return {
+                "breakfast": "Eggs + Toast",
+                "lunch": "Rice + Chicken + Vegetables",
+                "dinner": "Chapati + Fish curry",
+                "snacks": "Fruits + Boiled eggs"
+            }
 
-    input_data = pd.get_dummies(input_data)
 
-    training_columns = model.feature_names_in_
+# -----------------------------
+# MAIN ENDPOINT
+# -----------------------------
+@app.post("/generate-plan")
+def generate_plan(user: UserInput):
 
-    for col in training_columns:
-        if col not in input_data.columns:
-            input_data[col] = 0
+    calories = calculate_calories(
+        user.weight,
+        user.height,
+        user.age,
+        user.goal,
+        user.activity_level
+    )
 
-    input_data = input_data[training_columns]
-
-    prediction = model.predict(input_data)
-
-    calories, protein, carbs, fat = prediction[0]
+    diet = generate_diet(
+        calories,
+        user.diet_type,
+        user.goal
+    )
 
     return {
-        "calories": round(float(calories), 2),
-        "protein": round(float(protein), 2),
-        "carbs": round(float(carbs), 2),
-        "fat": round(float(fat), 2)
+        "user_details": user,
+        "recommended_calories_per_day": round(calories),
+        "diet_plan": diet,
+        "note": "This is a general recommendation. Consult a professional for medical advice."
     }
