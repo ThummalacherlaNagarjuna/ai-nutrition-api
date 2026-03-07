@@ -19,11 +19,15 @@ from fastapi import UploadFile, File
 import requests
 
 
+
 # ============================================
 # INITIALIZE FASTAPI
 # ============================================
 
 app = FastAPI()
+@app.get("/")
+def home():
+    return {"message": "AI Nutrition API is running"}
 
 
 # ============================================
