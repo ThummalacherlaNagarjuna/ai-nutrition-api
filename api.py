@@ -400,17 +400,22 @@ def generate_medical_diet(conditions):
     snacks = ["almonds", "yogurt", "apple"]
 
     if "diabetes" in conditions:
-        breakfast.remove("banana")
-        snacks.remove("apple")
+        if "banana" in breakfast:
+            breakfast.remove("banana")
+        if "apple" in snacks:
+            snacks.remove("apple")
 
     if "cholesterol" in conditions:
-        breakfast.remove("egg")
+        if "egg" in breakfast:
+            breakfast.remove("egg")
 
     if "thyroid" in conditions:
-        lunch.remove("spinach")
+        if "spinach" in lunch:
+            lunch.remove("spinach")
 
     if "weight_loss" in conditions:
-        lunch.remove("brown rice")
+        if "brown rice" in lunch:
+            lunch.remove("brown rice")
 
     return {
         "breakfast": breakfast,
@@ -423,9 +428,12 @@ def generate_medical_diet(conditions):
 @app.post("/medical-diet")
 def generate_medical_diet(data: DietRequest):
 
+    if data.height == 0:
+        return {"error": "Height cannot be zero"}
     bmi = data.weight / ((data.height / 100) ** 2)
 
-    diet = generate_medical_diet(data.health_conditions)
+    conditions = [c.lower() for c in data.health_conditions]
+    diet = generate_medical_diet(conditions)
 
     foods = (
         diet["breakfast"]
