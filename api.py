@@ -392,7 +392,7 @@ def get_nutrition(food):
     return calories, protein, carbs, fat, fiber, sugar
 
 
-def generate_diet(conditions):
+def generate_medical_diet(conditions):
 
     breakfast = ["oats", "milk", "egg", "banana"]
     lunch = ["brown rice", "dal", "chicken breast", "spinach"]
@@ -421,11 +421,11 @@ def generate_diet(conditions):
 
 
 @app.post("/medical-diet")
-def medical_diet(data: DietRequest):
+def generate_medical_diet(data: DietRequest):
 
     bmi = data.weight / ((data.height / 100) ** 2)
 
-    diet = generate_diet(data.health_conditions)
+    diet = generate_medical_diet(data.health_conditions)
 
     foods = (
         diet["breakfast"]
